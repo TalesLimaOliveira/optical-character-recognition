@@ -5,33 +5,38 @@ def draw_network_visualization(model, img_tensor):
     with torch.no_grad():
         output, h1, h2 = model(img_tensor.view(1, 1, 28, 28))
 
-    # Extrair subconjunto das ativações
+    # Extract a subset of activations for visualization
     input_flat = img_tensor.view(-1)[:18].tolist()
     h1_sub = h1.view(-1)[:14].tolist()
     h2_sub = h2.view(-1)[:14].tolist()
     out_sub = output.view(-1).tolist()
 
-    # Extrair subconjunto dos pesos
-    def extract_weights(layer, in_count, out_count):
-        w = layer.weight[:out_count, :in_count].tolist()
-        return [[w[j][i] for j in range(out_count)] for i in range(in_count)]
-
     # Only show weights for neuron 1 (index 0) of each layer
-    weights1 = [[w[0] for w in model.fc1.weight[:14, :18].tolist()]]  # shape: [1][18]
-    weights2 = [[w[0] for w in model.fc2.weight[:14, :14].tolist()]]  # shape: [1][14]
-    weights3 = [[w[0] for w in model.fc3.weight[:10, :14].tolist()]]  # shape: [1][14]
+    weights1 = [[w[0] for w in model.fc1.weight[:14, :18].tolist()]]
+    weights2 = [[w[0] for w in model.fc2.weight[:14, :14].tolist()]]
+    weights3 = [[w[0] for w in model.fc3.weight[:10, :14].tolist()]]
 
     layers = [18, 14, 14, 10]
     values = [input_flat, h1_sub, h2_sub, out_sub]
     weights = [weights1, weights2, weights3]
-    # Encontrar o índice do neurônio de saída ativado (maior valor)
     activated_idx = out_sub.index(max(out_sub))
-    
+
+    # Calculate probabilities for output neurons
+    import numpy as np
+    probs = np.exp(out_sub) / np.sum(np.exp(out_sub))
+    probs = probs.tolist()
+
     st.markdown("""
-    <div style='position: relative; width: 1000px; height: 40px; margin: 0 auto 0.5em auto;'>
+    <div style='position: relative; width: 1000px; height: 40px; margin: 0 auto;'>
         <div style='position: absolute; left: 75px; top: 0; width: 0; text-align: center; font-weight: bold; font-size: 1.2em; color: #fff;'>INPUT</div>
         <div style='position: absolute; left: 375px; top: 0; width: 200px; text-align: center; font-weight: bold; font-size: 1.2em; color: #fff; white-space: nowrap;'>HIDDEN LAYERS</div>
-        <div style='position: absolute; left: 825px; top: 0; width: 0; text-align: center; font-weight: bold; font-size: 1.2em; color: #fff;'>OUTPUT</div>
+        <div style='position: absolute; left: 812px; top: 0; width: 0; text-align: center; font-weight: bold; font-size: 1.2em; color: #fff;'>OUTPUT</div>
+    </div>
+    <div style='position: relative; width: 1000px; height: 30px; margin: 0 auto;'>
+        <div style='position: absolute; left: 40px; top: 0; width: 200; text-align: center; font-size: 1.1em; color: #bbb;'>784 Image Pixels</div>
+        <div style='position: absolute; left: 315px; top: 0; width: 200; text-align: center; font-size: 1.1em; color: #bbb;'>128 ReLU</div>
+        <div style='position: absolute; left: 570px; top: 0; width: 200; text-align: center; font-size: 1.1em; color: #bbb;'>64 ReLU</div>
+        <div style='position: absolute; left: 807px; top: 0; width: 200; text-align: center; font-size: 1.1em; color: #bbb;'>10 Softmax</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -39,13 +44,13 @@ def draw_network_visualization(model, img_tensor):
     <div style='display: flex; justify-content: center; width: 100%;'>
       <canvas id=\"canvas\" style=\"display:block; margin:0 auto; max-width:1000px; width:1000px; height:700px;\" width=\"1000\" height=\"700\"></canvas>
       <script>
-        const canvas = document.getElementById(\"canvas\");
-        const ctx = canvas.getContext(\"2d\");
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
         const layers = {layers};
         const values = {values};
+        const outputProbs = {probs};
         const layerX = [100, 350, 600, 850];
         const radius = 22;
-        // Encontrar o índice do neurônio de saída ativado (maior valor)
         const outputLayer = values[values.length - 1];
         let maxIdx = 0;
         for (let i = 1; i < outputLayer.length; i++) {{
@@ -59,7 +64,7 @@ def draw_network_visualization(model, img_tensor):
         }}
         function draw() {{
           ctx.clearRect(0, 0, canvas.width, canvas.height);
-          // Desenhar todas as conexões (linhas verdes)
+          // Draw all connections
           for (let l = 0; l < layers.length - 1; l++) {{
             for (let i = 0; i < layers[l]; i++) {{
               for (let j = 0; j < layers[l+1]; j++) {{
@@ -76,7 +81,7 @@ def draw_network_visualization(model, img_tensor):
               }}
             }}
           }}
-          // Desenhar neurônios
+          // Draw neurons
           for (let l = 0; l < layers.length; l++) {{
             for (let i = 0; i < layers[l]; i++) {{
               const x = layerX[l];
@@ -84,11 +89,16 @@ def draw_network_visualization(model, img_tensor):
               ctx.save();
               ctx.beginPath();
               ctx.arc(x, y, radius, 0, 2 * Math.PI);
-              let fill;
-              if (values[l][i] > 0) {{
-                fill = '#2ecc40';
+              let fill = '#111';
+              // Only activate output neuron if probability >= 0.1%
+              if (l === layers.length - 1) {{
+                if (outputProbs[i] >= 0.001) {{
+                  fill = '#2ecc40';
+                }}
               }} else {{
-                fill = '#111';
+                if (values[l][i] > 0) {{
+                  fill = '#2ecc40';
+                }}
               }}
               ctx.fillStyle = fill;
               ctx.fill();
@@ -96,15 +106,15 @@ def draw_network_visualization(model, img_tensor):
               ctx.lineWidth = 3;
               ctx.stroke();
               ctx.restore();
-              // Se for camada de saída, desenhar valor dentro e label ao lado
+              // Output layer: draw probability and label
               if (l === layers.length - 1) {{
                 ctx.save();
-                // Valor dentro do neurônio (menor)
+                // Probability as percentage inside neuron
                 ctx.fillStyle = '#fff';
-                ctx.font = 'bold 12px monospace';
+                ctx.font = 'bold 13px monospace';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(values[l][i].toFixed(2), x, y);
+                ctx.fillText((outputProbs[i]*100).toFixed(1) + '%', x, y);
                 // Label ao lado direito (maior e mais espaçado)
                 ctx.fillStyle = '#fff';
                 ctx.font = 'bold 28px monospace';
@@ -124,7 +134,6 @@ def draw_network_visualization(model, img_tensor):
           }}
         }}
         function resizeCanvas() {{
-          // Fix width/height to avoid oval shapes
           canvas.width = 1000;
           canvas.height = 700;
           draw();

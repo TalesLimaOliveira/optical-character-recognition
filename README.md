@@ -15,9 +15,12 @@ This project is a web application for Optical Character Recognition (OCR) using 
 ## Project Structure
 ```
 ├── streamlit_app.py           # Streamlit web app (UI/front-end)
+├── src/
+│   ├── network.py             # Neural network architecture definition
+│   ├── nn_draw.py             # Neural network visualization logic
+│   └── utils.py               # Model/data loading and utility functions
 ├── models/
-│   └── network.py             # Neural network architecture definition
-├── mnist_classifier_final.pth # Pre-trained model weights (not included in repo)
+│   └── mnist_classifier_final.pth # Pre-trained model weights (not included in repo)
 ├── requirements.txt           # Python dependencies
 └── notebooks/
     └── ocr_mnist_training.ipynb # Notebook for model training
@@ -38,13 +41,14 @@ This project is a web application for Optical Character Recognition (OCR) using 
    ```sh
    pip install -r requirements.txt
    ```
-2. **Ensure the pre-trained model file** `mnist_classifier_final.pth` is in the project root directory.
+2. **Ensure the pre-trained model file** `mnist_classifier_final.pth` is in the `models/` directory.
 3. **Start the app:**
    ```sh
    streamlit run streamlit_app.py
    ```
 
 ## Notes
-- The neural network architecture is defined in `models/network.py` and imported by the app.
+- The neural network architecture is defined in `src/network.py` and imported by the app.
+- Model/data loading and utility functions are in `src/utils.py`.
 - The app only uses the MNIST test set for visualization and does not retrain the model.
 - To retrain or fine-tune the model, use the notebook in `notebooks/`.
