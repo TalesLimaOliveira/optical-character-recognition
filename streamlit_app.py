@@ -4,6 +4,7 @@ import torchvision.transforms as transforms
 import torchvision
 import numpy as np
 from src.network import Net
+from src.nn_draw import draw_network_visualization
 
 # --- Model and dataset loading utilities ---
 @st.cache_resource
@@ -40,42 +41,45 @@ with torch.no_grad():
     probs = torch.softmax(output, dim=1).numpy().flatten()
     pred = int(np.argmax(probs))
 
+
 # --- Streamlit UI ---
-st.title('Optical Character Recognition')
-st.markdown('<div style="font-size:16px; margin-bottom:0px; margin-top:-16px;">by <a href="https://github.com/TalesLimaOliveira" target="_blank">Tales Lima Oliveira</a></div>', unsafe_allow_html=True)
-st.write("Predict what character is using MNIST dataset.")
+st.set_page_config(layout="wide", page_title="Optical Character Recognition")
+left_col, center_col, right_col = st.columns([1, 3, 1])
+
+# --- Title and description ---
+with center_col:
+    st.title('Optical Character Recognition')
+    st.markdown('<div style="font-size:16px; margin-bottom:0px; margin-top:-16px; text-align:left;">by <a href="https://github.com/TalesLimaOliveira" target="_blank">Tales Lima Oliveira</a></div>', unsafe_allow_html=True)
+    st.write("Predict what character is using MNIST dataset.")
 
 
-col_btn = st.columns([1, 1, 1])
-with col_btn[1]:
-    st.markdown("<div style='height:1.75em'></div>", unsafe_allow_html=True)  # Espaço extra acima do botão
-    if st.button("Select another random image", key="generate_btn", use_container_width=True):
-        pick_new_image()
-    st.markdown("""
-        <style>
-        div[data-testid=\"stButton\"] button {
-            background-color: #21ba45 !important;
-            color: white !important;
-            font-size: 1.2em !important;
-            padding: 0 !important;
-        }
-        </style>
-        """, unsafe_allow_html=True)
+    # Center column for image and prediction
+    data_cols = st.columns([2,1,2,2], gap="small")
+    with data_cols[1]:
+        img_to_show = img.squeeze().numpy() * 0.3081 + 0.1307
+        st.image(img_to_show, width=128, caption=f'True label: {label}')
+    with data_cols[2]:
+        st.markdown("<div style='height:1.75em'></div>", unsafe_allow_html=True)
+        if st.button("Select another random image", key="generate_btn", use_container_width=True):
+            pick_new_image()
+        st.markdown("""
+            <style>
+            div[data-testid=\"stButton\"] button {
+                background-color: #21ba45 !important;
+                color: white !important;
+                font-size: 1.2em !important;
+                padding: 0 !important;
+            }
+            </style>
+            """, unsafe_allow_html=True)
 
+        is_correct = pred == label
+        if is_correct:
+            st.markdown(f"<div style='text-align:center;'><span style='color:white;font-size:1.2em'>Prediction: </span> <b><span style='color:green;font-size:1.5em'>{pred} (Correct)</span></b></div>", unsafe_allow_html=True)
+        else:
+            st.markdown(f"<div style='text-align:center;'><span style='color:white;font-size:1.2em'>Prediction: </span> <b><span style='color:red;font-size:1.5em'>{pred} (Wrong)</span></b></div>", unsafe_allow_html=True)
 
-# Layout: image on the left, result on the right
-col1, col2 = st.columns([1, 2], gap="large")
-with col1:
-    img_to_show = img.squeeze().numpy() * 0.3081 + 0.1307
-    st.image(img_to_show, width=128, caption=f'True label: {label}')
-with col2:
-    st.subheader('Neural Network Result')
-    is_correct = pred == label
-    if is_correct:
-        st.markdown(f"<b><span style='color:white;font-size:1.5em'>Prediction: </span></b> <span style='color:green;font-size:1.5em'>{pred} (Correct)</span>", unsafe_allow_html=True)
-    else:
-        st.markdown(f"<b><span style='color:white;font-size:1.5em'>Prediction: </span></b> <span style='color:red;font-size:1.5em'>{pred} (Wrong)</span>", unsafe_allow_html=True)
-
-# Probabilities below
-st.markdown('<b>Probabilities:</b>', unsafe_allow_html=True)
-st.bar_chart(probs)
+# Neural network visualization
+with center_col:
+    st.markdown('<h2 style="text-align:left; margin-bottom:0.5em; margin-top:1.5em;">Neural Network Visualization:</h2>', unsafe_allow_html=True)
+    draw_network_visualization(model, img)
