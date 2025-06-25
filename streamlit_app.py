@@ -1,0 +1,67 @@
+import streamlit as st
+import torch
+import torchvision.transforms as transforms
+import torchvision
+import numpy as np
+from src.network import Net
+
+# --- Model and dataset loading utilities ---
+@st.cache_resource
+def load_model():
+    model = Net()
+    model.load_state_dict(torch.load('models/mnist_classifier_final.pth', map_location='cpu'))
+    model.eval()
+    return model
+
+@st.cache_resource
+def load_testset():
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.1307,), (0.3081,))
+    ])
+    return torchvision.datasets.MNIST(root='./data', train=False, download=True, transform=transform)
+
+# --- Utility to pick a new random image ---
+def pick_new_image():
+    st.session_state.img_idx = np.random.randint(0, len(testset))
+
+# --- Initialization ---
+model = load_model()
+testset = load_testset()
+
+if 'img_idx' not in st.session_state:
+    st.session_state.img_idx = np.random.randint(0, len(testset))
+
+# --- Get image and prediction ---
+img, label = testset[st.session_state.img_idx]
+img_input = img.unsqueeze(0)
+with torch.no_grad():
+    output, _, _ = model(img_input)
+    probs = torch.softmax(output, dim=1).numpy().flatten()
+    pred = int(np.argmax(probs))
+
+# --- Streamlit UI ---
+st.title('MNIST Neural Network Visualizer')
+
+# Centralized button using Streamlit's native button
+col_btn = st.columns([1, 1, 1])
+with col_btn[1]:
+    if st.button('Select another random image', key='random_img_btn'):
+        pick_new_image()
+
+# Layout: image on the left, result on the right
+col1, col2 = st.columns([1, 2], gap="large")
+with col1:
+    img_to_show = img.squeeze().numpy() * 0.3081 + 0.1307
+    st.image(img_to_show, width=128, caption=f'True label: {label}')
+with col2:
+    st.subheader('Neural Network Result')
+    is_correct = pred == label
+    if is_correct:
+        st.markdown(f"<b><span style='color:white;font-size:1.5em'>Prediction: </span></b> <span style='color:green;font-size:1.5em'>{pred} (Correct)</span>", unsafe_allow_html=True)
+    else:
+        st.markdown(f"<b><span style='color:white;font-size:1.5em'>Prediction: </span></b> <span style='color:red;font-size:1.5em'>{pred} (Wrong)</span>", unsafe_allow_html=True)
+
+# Probabilities below
+st.markdown('<b>Probabilities:</b>', unsafe_allow_html=True)
+st.bar_chart(probs)
