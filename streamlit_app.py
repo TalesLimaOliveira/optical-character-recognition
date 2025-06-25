@@ -1,14 +1,4 @@
 import streamlit as st
-st.set_page_config(
-    layout="wide",
-    page_title="Optical Character Recognition",
-    menu_items={
-        "Get help": "https://ocr-taleslimaoliveira.streamlit.app/",
-        "Report a bug": "https://handwritten-digit-talesoliveira.streamlit.app/",
-        "About": "Veja também: <a href='https://gen-ocr-taleslimaoliveira.streamlit.app/' target='_blank'>Gen and OCR</a> | <a href='https://github.com/TalesLimaOliveira' target='_blank'>Meu Github</a>"
-    }
-)
-
 import torch
 import numpy as np
 from src.nn_draw import draw_network_visualization
@@ -31,6 +21,7 @@ with torch.no_grad():
 
 
 # --- Streamlit UI ---
+st.set_page_config(layout="wide",page_title="Optical Character Recognition",)
 left_col, center_col, right_col = st.columns([1, 3, 1])
 
 # --- Top menu navigation ---
