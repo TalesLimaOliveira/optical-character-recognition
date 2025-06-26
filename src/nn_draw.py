@@ -42,104 +42,114 @@ def draw_network_visualization(model, img_tensor):
 
     st.components.v1.html(f"""
     <div style='display: flex; justify-content: center; width: 100%;'>
-      <canvas id=\"canvas\" style=\"display:block; margin:0 auto; max-width:1000px; width:1000px; height:700px;\" width=\"1000\" height=\"700\"></canvas>
+      <div id="canvas-container" style="width:100%; max-width:1000px; min-width:320px;">
+        <canvas id="canvas" style="display:block; margin:0 auto; width:100%; height:auto; background:transparent;" width="1000" height="700"></canvas>
+      </div>
       <script>
-        const canvas = document.getElementById("canvas");
-        const ctx = canvas.getContext("2d");
-        const layers = {layers};
-        const values = {values};
-        const outputProbs = {probs};
-        const layerX = [100, 350, 600, 850];
-        const radius = 22;
-        const outputLayer = values[values.length - 1];
-        let maxIdx = 0;
-        for (let i = 1; i < outputLayer.length; i++) {{
-          if (outputLayer[i] > outputLayer[maxIdx]) maxIdx = i;
-        }}
-        function getNeuronY(layerIndex, neuronIndex) {{
-          const count = layers[layerIndex];
-          const spacing = 620 / (count - 1);
-          const offset = 40;
-          return offset + neuronIndex * spacing;
-        }}
-        function draw() {{
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          // Draw all connections
-          for (let l = 0; l < layers.length - 1; l++) {{
-            for (let i = 0; i < layers[l]; i++) {{
-              for (let j = 0; j < layers[l+1]; j++) {{
-                const x1 = layerX[l];
-                const y1 = getNeuronY(l, i);
-                const x2 = layerX[l+1];
-                const y2 = getNeuronY(l+1, j);
-                ctx.beginPath();
-                ctx.moveTo(x1, y1);
-                ctx.lineTo(x2, y2);
-                ctx.strokeStyle = '#2ecc40';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-              }}
-            }}
+        function waitForCanvasAndDraw() {{
+          var canvas = document.getElementById('canvas');
+          if (!canvas) {{
+            setTimeout(waitForCanvasAndDraw, 100);
+            return;
           }}
-          // Draw neurons
-          for (let l = 0; l < layers.length; l++) {{
-            for (let i = 0; i < layers[l]; i++) {{
-              const x = layerX[l];
-              const y = getNeuronY(l, i);
-              ctx.save();
-              ctx.beginPath();
-              ctx.arc(x, y, radius, 0, 2 * Math.PI);
-              let fill = '#111';
-              // Only activate output neuron if probability >= 0.1%
-              if (l === layers.length - 1) {{
-                if (outputProbs[i] >= 0.001) {{
-                  fill = '#2ecc40';
-                }}
-              }} else {{
-                if (values[l][i] > 0) {{
-                  fill = '#2ecc40';
-                }}
-              }}
-              ctx.fillStyle = fill;
-              ctx.fill();
-              ctx.strokeStyle = '#2ecc40';
-              ctx.lineWidth = 3;
-              ctx.stroke();
-              ctx.restore();
-              // Output layer: draw probability and label
-              if (l === layers.length - 1) {{
-                ctx.save();
-                // Probability as percentage inside neuron
-                ctx.fillStyle = '#fff';
-                ctx.font = 'bold 13px monospace';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText((outputProbs[i]*100).toFixed(1) + '%', x, y);
-                // Label ao lado direito (maior e mais espaçado)
-                ctx.fillStyle = '#fff';
-                ctx.font = 'bold 28px monospace';
-                ctx.textAlign = 'left';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(i.toString(), x + radius + 28, y);
-                if (i === maxIdx) {{
+          var ctx = canvas.getContext('2d');
+          var layers = {layers};
+          var values = {values};
+          var outputProbs = {probs};
+          function getCanvasWidth() {{
+            return canvas.parentElement.offsetWidth;
+          }}
+          function getCanvasHeight() {{
+            return Math.round(getCanvasWidth() * 0.7);
+          }}
+          function getLayerX(width) {{
+            return [0.1, 0.35, 0.6, 0.85].map(function(f) {{ return Math.round(width * f); }});
+          }}
+          function getNeuronY(layerIndex, neuronIndex, height) {{
+            var count = layers[layerIndex];
+            var spacing = (height - 80) / (count - 1);
+            var offset = 40;
+            return offset + neuronIndex * spacing;
+          }}
+          function draw() {{
+            var width = getCanvasWidth();
+            var height = getCanvasHeight();
+            canvas.width = width;
+            canvas.height = height;
+            ctx.clearRect(0, 0, width, height);
+            var layerX = getLayerX(width);
+            var radius = Math.max(18, Math.min(28, Math.round(width/50)));
+            for (var l = 0; l < layers.length - 1; l++) {{
+              for (var i = 0; i < layers[l]; i++) {{
+                for (var j = 0; j < layers[l+1]; j++) {{
+                  var x1 = layerX[l];
+                  var y1 = getNeuronY(l, i, height);
+                  var x2 = layerX[l+1];
+                  var y2 = getNeuronY(l+1, j, height);
                   ctx.beginPath();
-                  ctx.arc(x, y, radius + 3, 0, 2 * Math.PI);
-                  ctx.strokeStyle = '#0099ff';
-                  ctx.lineWidth = 5;
+                  ctx.moveTo(x1, y1);
+                  ctx.lineTo(x2, y2);
+                  ctx.strokeStyle = '#2ecc40';
+                  ctx.lineWidth = 2;
                   ctx.stroke();
                 }}
+              }}
+            }}
+            for (var l = 0; l < layers.length; l++) {{
+              for (var i = 0; i < layers[l]; i++) {{
+                var x = layerX[l];
+                var y = getNeuronY(l, i, height);
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, 2 * Math.PI);
+                var fill = '#111';
+                if (l === layers.length - 1) {{
+                  if (outputProbs[i] >= 0.001) {{
+                    fill = '#2ecc40';
+                  }}
+                }} else {{
+                  if (values[l][i] > 0) {{
+                    fill = '#2ecc40';
+                  }}
+                }}
+                ctx.fillStyle = fill;
+                ctx.fill();
+                ctx.strokeStyle = '#2ecc40';
+                ctx.lineWidth = 3;
+                ctx.stroke();
                 ctx.restore();
+                if (l === layers.length - 1) {{
+                  ctx.save();
+                  ctx.fillStyle = '#fff';
+                  ctx.font = 'bold ' + Math.max(11, Math.round(width/80)) + 'px monospace';
+                  ctx.textAlign = 'center';
+                  ctx.textBaseline = 'middle';
+                  ctx.fillText((outputProbs[i]*100).toFixed(1) + '%', x, y);
+                  ctx.fillStyle = '#fff';
+                  ctx.font = 'bold ' + Math.max(22, Math.round(width/35)) + 'px monospace';
+                  ctx.textAlign = 'left';
+                  ctx.textBaseline = 'middle';
+                  ctx.fillText(i.toString(), x + radius + Math.max(18, Math.round(width/55)), y);
+                  if (i === outputProbs.indexOf(Math.max.apply(null, outputProbs))) {{
+                    ctx.beginPath();
+                    ctx.arc(x, y, radius + 3, 0, 2 * Math.PI);
+                    ctx.strokeStyle = '#0099ff';
+                    ctx.lineWidth = 5;
+                    ctx.stroke();
+                  }}
+                  ctx.restore();
+                }}
               }}
             }}
           }}
-        }}
-        function resizeCanvas() {{
-          canvas.width = 1000;
-          canvas.height = 700;
+          function resizeCanvas() {{
+            draw();
+          }}
+          window.addEventListener('resize', resizeCanvas);
+          setTimeout(resizeCanvas, 100);
           draw();
         }}
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
+        waitForCanvasAndDraw();
       </script>
     </div>
     """, height=750)

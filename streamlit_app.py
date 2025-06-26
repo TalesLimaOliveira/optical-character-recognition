@@ -21,7 +21,7 @@ with torch.no_grad():
 
 
 # --- Streamlit UI ---
-st.set_page_config(layout="wide",page_title="Optical Character Recognition",)
+st.set_page_config(layout="wide", page_title="Optical Character Recognition")
 left_col, center_col, right_col = st.columns([1, 3, 1])
 
 # --- Top menu navigation ---
@@ -46,32 +46,36 @@ with center_col:
 
 
     # Center column for image and prediction
-    data_cols = st.columns([2,1,2,2], gap="large")
-    with data_cols[1]:
+    image_cols = st.columns([2,1,2], gap="small")
+    with image_cols[1]:
         img_to_show = img.squeeze().numpy() * 0.3081 + 0.1307
-        st.image(img_to_show, width=128, caption=f'True label: {label}')
-    with data_cols[2]:
-        st.markdown("<div style='height:1.75em'></div>", unsafe_allow_html=True)
-        if st.button("Random Image", key="generate_btn", use_container_width=True):
-            pick_new_image(testset)
+        st.image(img_to_show, width=128, caption=f'True label: {label}', use_container_width=True)
         st.markdown("""
-            <style>
-            div[data-testid=\"stButton\"] button {
-                background-color: #21ba45 !important;
-                color: white !important;
-                font-size: 1.2em !important;
-                padding: 0 !important;
-            }
-            </style>
-            """, unsafe_allow_html=True)
+        <style>
+        .stButton>button {
+            background-color: #21ba45 !important;
+            color: white !important;
+            font-size: 1.2em !important;
+            padding: 0.4em 1.2em !important;
+            border-radius: 8px !important;
+            border: none !important;
+            margin-top: 0.3em !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
 
+    data_cols = st.columns([2,2,2], gap="small")
+    with data_cols[1]:
+        if st.button("Select Random Image", key="generate_btn", use_container_width=True):
+            pick_new_image(testset)
         is_correct = pred == label
-        if is_correct:
-            st.markdown(f"<div style='text-align:center;'><span style='color:white;font-size:1.2em'>Prediction: </span> <b><span style='color:green;font-size:1.5em'>{pred} (Correct)</span></b></div>", unsafe_allow_html=True)
-        else:
-            st.markdown(f"<div style='text-align:center;'><span style='color:white;font-size:1.2em'>Prediction: </span> <b><span style='color:red;font-size:1.5em'>{pred} (Wrong)</span></b></div>", unsafe_allow_html=True)
+        pred_color = 'green' if is_correct else 'red'
+        pred_status = 'Correct' if is_correct else 'Wrong'
+        st.markdown(f"""
+            <div class='prediction-text' style='text-align:center;'><span style='color:white;font-size:1.2em'>Prediction: </span> <b><span style='color:{pred_color};font-size:1.5em'>{pred} ({pred_status})</span></b></div>
+        """, unsafe_allow_html=True)
 
 # Neural network visualization
 with center_col:
-    st.markdown('<h3 style="text-align:left; margin-bottom:0.5em; margin-top:0em;">Neural Network Visualization:</h3>', unsafe_allow_html=True)
+    st.markdown('<h3 style="text-align:left; margin-bottom:0.5em; margin-top:1em;">Neural Network Visualization:</h3>', unsafe_allow_html=True)
     draw_network_visualization(model, img)
